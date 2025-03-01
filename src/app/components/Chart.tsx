@@ -20,28 +20,8 @@ const Chart: React.FC<ChartProps> = ({ data, timeFrame, setData }) => {
   const chartRef = useRef<any>(null);
   const candlestickSeriesRef = useRef<any>(null);
   const volumeSeriesRef = useRef<any>(null);
-  const [width, setWidth] = useState(0);
   const isFetchingRef = useRef(false);
   const { theme } = useTheme();
-
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const updateSize = () => {
-      const newWidth = chartContainerRef.current?.clientWidth || 0;
-      setWidth(newWidth);
-
-      if (chartRef.current) {
-        chartRef.current.applyOptions({ width: newWidth });
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(chartContainerRef.current);
-    updateSize();
-
-    return () => resizeObserver.disconnect();
-  }, []);
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return;
@@ -64,7 +44,7 @@ const Chart: React.FC<ChartProps> = ({ data, timeFrame, setData }) => {
           background: { color: isDarkMode ? "black" : "white" },
         },
         width: chartContainerRef.current.clientWidth,
-        height: chartContainerRef.current.clientHeight,
+        height: 450,
       });
     } else {
       chartRef.current.applyOptions({
@@ -95,7 +75,10 @@ const Chart: React.FC<ChartProps> = ({ data, timeFrame, setData }) => {
 
     const newVolumeSeries = chartRef.current.addSeries(HistogramSeries, {
       color: isDarkMode ? "rgba(173, 216, 230, 0.5)" : "rgba(76, 175, 80, 0.5)",
-      priceScaleId: "volume",
+      priceFormat: {
+        type: "volume",
+      },
+      priceScaleId: "",
     });
 
     newVolumeSeries.setData(
@@ -109,17 +92,43 @@ const Chart: React.FC<ChartProps> = ({ data, timeFrame, setData }) => {
       }))
     );
 
-    chartRef.current
-      .priceScale("right")
-      .applyOptions({ scaleMargins: { top: 0.1, bottom: 0.3 } });
+    newVolumeSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.7,
+        bottom: 0,
+      },
+    });
 
-    chartRef.current
-      .priceScale("volume")
-      .applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    newCandlestickSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.1,
+        bottom: 0.4,
+      },
+    });
+
+    chartRef.current.timeScale().applyOptions({
+      timeVisible: true,
+    });
+
+    chartRef.current.timeScale().fitContent();
+
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
 
     candlestickSeriesRef.current = newCandlestickSeries;
     volumeSeriesRef.current = newVolumeSeries;
-  }, [theme, data]);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [theme]);
 
   useEffect(() => {
     if (
@@ -191,7 +200,7 @@ const Chart: React.FC<ChartProps> = ({ data, timeFrame, setData }) => {
       timeScale.unsubscribeVisibleTimeRangeChange(handleVisibleTimeRangeChange);
   }, [data, timeFrame]);
 
-  return <div ref={chartContainerRef} className="w-full h-[400px]" />;
+  return <div ref={chartContainerRef} className="w-full h-[450px]" />;
 };
 
 export default Chart;
